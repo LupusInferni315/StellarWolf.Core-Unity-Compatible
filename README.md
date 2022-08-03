@@ -1,7 +1,7 @@
 # Stellarwolf.Core (Unity Compatible)
 The core library of the Stellar Wolf Framework reworked to be compatible with Unity3D
 
-If you are not working with unity look at this library [StellarWolf.Core](https://github.com/LupusInferni315/Stellarwolf.Core) instead
+If you are not working with Unity3D look at this library [StellarWolf.Core](https://github.com/LupusInferni315/Stellarwolf.Core) instead
 
 # Chaos Engine
 The Chaos Engine is a multipurpose Pseudo-Random Number Generator

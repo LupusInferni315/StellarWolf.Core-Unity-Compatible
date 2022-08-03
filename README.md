@@ -3,6 +3,8 @@ The core library of the Stellar Wolf Framework reworked to be compatible with Un
 
 If you are not working with Unity3D look at this library [StellarWolf.Core](https://github.com/LupusInferni315/Stellarwolf.Core) instead
 
+Property Drawers and Editor Extensions are [here](https://github.com/LupusInferni315/Stellarwolf.CoreEditor)
+
 # Chaos Engine
 The Chaos Engine is a multipurpose Pseudo-Random Number Generator
 

@@ -1,9 +1,9 @@
-#region Using Directives
+    #region Using Directives
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Runtime.Serialization.Formatters.Binary;
 
 #endregion
 
@@ -22,8 +22,9 @@ namespace StellarWolf.Core
         private int m_INext;
         private int m_INextP;
         private readonly int [] m_SeedArray = new int [ 56 ];
+        private object m_StateLock = new object ();
 
-        [ThreadStatic] private static ChaosEngine m_Shared;
+        private static ChaosEngine m_Shared;
 
         #endregion
 
@@ -39,6 +40,13 @@ namespace StellarWolf.Core
                 if ( m_Shared is null )
                     m_Shared = new ChaosEngine ();
                 return m_Shared;
+            }
+
+            set
+            {
+                if ( value is null )
+                    value = new ChaosEngine ();
+                m_Shared = value;
             }
         }
 
@@ -102,34 +110,38 @@ namespace StellarWolf.Core
         /// <param name="seed">The initial state of the <seealso cref="ChaosEngine"/>.</param>
         public void Reseed ( int? seed )
         {
-            m_Seed = seed ?? Guid.NewGuid ().GetHashCode ();
 
-            int subtraction = ( m_Seed == int.MinValue ) ? int.MaxValue : Math.Abs ( m_Seed );
-            int mj = 161803398 - subtraction;
-            m_SeedArray [ 55 ] = mj;
-            int mk = 1;
-
-            for ( int i = 1; i < 55; i++ )
+            lock ( m_StateLock )
             {
-                int ii = 21 * i % 55;
-                m_SeedArray [ ii ] = mk;
-                mk = mj - mk;
-                if ( mk < 0 )
-                    mk += int.MaxValue;
-                mj = m_SeedArray [ ii ];
-            }
+                m_Seed = seed ?? Guid.NewGuid ().GetHashCode ();
 
-            for ( int k = 1; k < 5; k++ )
-            {
-                for ( int i = 1; i < 56; i++ )
+                int subtraction = ( m_Seed == int.MinValue ) ? int.MaxValue : Math.Abs ( m_Seed );
+                int mj = 161803398 - subtraction;
+                m_SeedArray [ 55 ] = mj;
+                int mk = 1;
+
+                for ( int i = 1; i < 55; i++ )
                 {
-                    m_SeedArray [ i ] -= m_SeedArray [ 1 + ( ( i + 30 ) % 55 ) ];
-                    if ( m_SeedArray [ i ] < 0 )
-                        m_SeedArray [ i ] += int.MaxValue;
+                    int ii = 21 * i % 55;
+                    m_SeedArray [ ii ] = mk;
+                    mk = mj - mk;
+                    if ( mk < 0 )
+                        mk += int.MaxValue;
+                    mj = m_SeedArray [ ii ];
                 }
+
+                for ( int k = 1; k < 5; k++ )
+                {
+                    for ( int i = 1; i < 56; i++ )
+                    {
+                        m_SeedArray [ i ] -= m_SeedArray [ 1 + ( ( i + 30 ) % 55 ) ];
+                        if ( m_SeedArray [ i ] < 0 )
+                            m_SeedArray [ i ] += int.MaxValue;
+                    }
+                }
+                m_INext = 0;
+                m_INextP = 21;
             }
-            m_INext = 0;
-            m_INextP = 21;
 
         }
 
@@ -1076,27 +1088,33 @@ namespace StellarWolf.Core
 
         private int NextSample ()
         {
-            int locINext = m_INext;
-            int locINextP = m_INextP;
 
-            if ( ++locINext >= 56 )
-                locINext = 1;
+            lock ( m_StateLock )
+            {
+                int locINext = m_INext;
+                int locINextP = m_INextP;
 
-            if ( ++locINextP >= 56 )
-                locINextP = 1;
+                if ( ++locINext >= 56 )
+                    locINext = 1;
 
-            int retVal = m_SeedArray [ locINext ] - m_SeedArray [ locINextP ];
+                if ( ++locINextP >= 56 )
+                    locINextP = 1;
 
-            if ( retVal == int.MaxValue )
-                retVal--;
+                int retVal = m_SeedArray [ locINext ] - m_SeedArray [ locINextP ];
 
-            if ( retVal < 0 )
-                retVal += int.MaxValue;
+                if ( retVal == int.MaxValue )
+                    retVal--;
 
-            m_SeedArray [ locINext ] = retVal;
-            m_INext = locINext;
-            m_INextP = locINextP;
-            return retVal;
+                if ( retVal < 0 )
+                    retVal += int.MaxValue;
+
+                m_SeedArray [ locINext ] = retVal;
+                m_INext = locINext;
+                m_INextP = locINextP;
+                return retVal;
+
+            }
+
         }
 
         #endregion
@@ -1123,7 +1141,7 @@ namespace StellarWolf.Core
         /// Write the current state of the <seealso cref="ChaosEngine"/> to a <seealso cref="Stream"/>
         /// </summary>
         /// <param name="stream">The stream to write the state to.</param>
-        /// <exception cref="NotSupportedException">The stream must be writable.</exception>
+        /// <exception cref="NotSupportedException"></exception>
         public void SaveState ( Stream stream )
         {
             try
@@ -1141,26 +1159,33 @@ namespace StellarWolf.Core
         /// Load an existing <seealso cref="ChaosEngine"/> state to the instance.
         /// </summary>
         /// <param name="state">The state of a <seealso cref="ChaosEngine"/> to load.</param>
-        /// <exception cref="Exception">state must be 59 elements in size.</exception>
+        /// <exception cref="Exception"></exception>
         public void LoadState ( int [] state )
         {
+
             if ( state.Length != 59 || state [ 3 ] != 0 )
                 throw new Exception ( "Chaos state is invalid or corrupted." );
 
-            m_Seed = state [ 0 ];
-            m_INext = state [ 1 ];
-            m_INextP = state [ 2 ];
+            lock ( m_StateLock )
+            {
 
-            for ( int i = 3; i < state.Length; i++ )
-                m_SeedArray [ i - 3 ] = state [ i ];
+                m_Seed = state [ 0 ];
+                m_INext = state [ 1 ];
+                m_INextP = state [ 2 ];
+
+                for ( int i = 3; i < state.Length; i++ )
+                    m_SeedArray [ i - 3 ] = state [ i ];
+
+            }
+
         }
 
         /// <summary>
         /// Load an existing <seealso cref="ChaosEngine"/> state from a <seealso cref="Stream"/>
         /// </summary>
         /// <param name="stream">The stream to read the state from.</param>
-        /// <exception cref="NotSupportedException">The stream must be readable.</exception>
-        /// <exception cref="Exception">state must be 59 elements in size.</exception>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="Exception"></exception>
         public void LoadState ( Stream stream )
         {
             try

@@ -6,7 +6,7 @@ If you are not working with Unity3D look at this library [StellarWolf.Core](http
 Property Drawers and Editor Extensions are [here](https://github.com/LupusInferni315/Stellarwolf.CoreEditor)
 
 # Chaos Engine
-The Chaos Engine is a multipurpose Pseudo-Random Number Generator
+The Chaos Engine is a thread-safe multipurpose Pseudo-Random Number Generator
 
 It contains the ability to generate singular, as well as fill and create arrays of
  - 32-bit integers (int)
@@ -27,7 +27,7 @@ It can also select random elements out of an `Enum` as well.
  
 The state of the generator can be saved to an `int[]` to be handled seperately or written directly to a `Stream` and can be loaded the same ways.
 
-The class provides a `ThreadStatic` instance for sharing a single instance across an entire application.
+The class provides a static instance for sharing a single instance across an entire application.
 
 The seed of the class can be provided in either the form of an integer or a string
  - If the seed is a string the class will attempt to convert it into an integer before seeding the generator (ie 315 is the same as "315").
@@ -42,10 +42,10 @@ The enum is used in conjunction with the `Dice` struct to store the count and ty
 # Dice
 The `Dice` struct provides a way to store and roll dice.
 
-It also provides static methods to roll dice at runtime without the need to create a `Dice` object, it also allows the caller to roll 'Non-Standard' dice such as a D3.
+It also provides static methods to roll dice at runtime without the need to create a `Dice` object.
 
 # IWeighted
 An object that inherits from `IWeighted` defines a weight to be applied to the instance for controlling how often an element is selected when selecting random elements from a list.
 
 # WeightAttribute
-An enum value with a `WeightAttribute` defines a weight to be applied to the instance for controlling how often an element is selected when selecting random elements from the enum.
+An enum value with a `WeightAttribute` defines a weight to be applied to the value for controlling how often an element is selected when selecting random elements from an enum.
